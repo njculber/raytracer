@@ -10,9 +10,9 @@ Perspective::Perspective(Vector camPos, Vector light, float dist, int worldWidth
 	screenHeightPixels = pixelHeight;
 }
 
-Ray Perspective::getRay(int x, int y){
-	float NDCx = (x + 0.5) / (float)screenWidthPixels;
-	float NDCy = (y + 0.5) / (float)screenHeightPixels;
+Ray Perspective::getRay(float x, float y){
+	float NDCx = x / (float)screenWidthPixels;
+	float NDCy = y / (float)screenHeightPixels;
 
 	float pixelX = (screenWidthWorld * NDCx) - 1;
 	float pixelY = 1 - (screenHeightWorld * NDCy);

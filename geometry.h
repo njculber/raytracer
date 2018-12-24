@@ -6,7 +6,9 @@ class Material
 	public: 
 		bool reflective;
 		bool specular;
+		bool diffuse;
 		Color color;
+		Material(){color = Color(0, 0, 0); reflective = 0; specular = 0; diffuse = 0;}
 		void print();
 };
 

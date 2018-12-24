@@ -15,4 +15,4 @@ geometry.o: geometry.h ray.h
 perspective.o: perspective.h vector.h ray.h
 
 clean:
-	rm ray reference.png custom.png normals.png geometry.o perspective.o ray-main.o raytracer.tgz
+	rm ray reference.png custom.png geometry.o perspective.o ray-main.o raytracer.tgz

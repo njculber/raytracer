@@ -26,7 +26,7 @@ RayHit Sphere::intersect(Ray ray){
 		normal.normalize();
 
 		// return RayHit object
-		return RayHit(t0, t1, mat.reflective, mat.specular, mat.color, normal, location, ray, 1);
+		return RayHit(t0, t1, mat.reflective, mat.specular, mat.diffuse, mat.color, normal, location, ray, 1);
 	}
 	else return RayHit();
 }
@@ -67,7 +67,9 @@ RayHit Triangle::intersect(Ray ray){
 	float beta = ( ( J * ( (E*I) - (H*F) ) ) + ( K * ( (G*F) - (D*I) ) ) + ( L * ( (D*H) - (E*G) ) ) ) / M;
 	if(beta < 0 || beta > (1 - gamma)) return RayHit();
 
-	// otherwise we've intersected the triangle
+	/* 
+		otherwise we've intersected the triangle
+	*/
 
 	//calculate location of hit
 	Vector location = (ray.direction * t) + ray.origin;
@@ -75,8 +77,8 @@ RayHit Triangle::intersect(Ray ray){
 	// calculate normal
 	Vector AB = Vector(A, B, C);
 	Vector AC = Vector(D, E, F);
-	Vector cross = AB.cross(AC);
-	cross.normalize();
+	Vector normal = AB.cross(AC);
+	normal.normalize();
 
-	return RayHit(t, t, mat.reflective, mat.specular, mat.color, cross, location, ray, 2);
+	return RayHit(t, t, mat.reflective, mat.specular, mat.diffuse, mat.color, normal, location, ray, 2);
 }

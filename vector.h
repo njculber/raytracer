@@ -1,6 +1,4 @@
 #include <cmath>
-#include <string>
-#include <stdarg.h>
 using namespace std;
 
 #ifndef VECTOR_H
@@ -23,14 +21,26 @@ class Vector
 		Vector operator * (Vector vec){return Vector(x*vec.x, y*vec.y, z*vec.z);}
 		Vector operator / (float in){return Vector(x/in, y/in, z/in);}
 		Vector operator * (float in){return Vector(x*in, y*in, z*in);}
+		Vector operator + (float in){return Vector(x+in, y+in, z+in);}
 };
 
 class Color
 {
 	public:
 		float r, g, b;
-		Color(){r = g = b = 0;}
+		Color(){r = 0;g = 0;b = 0;}
 		void print(){printf("< %f %f %f >\n", r, g, b);}
-		Color(float red, float green, float blue){r = red; g = green; b = blue;}
+		float clamp(float v, float min, float max){if(v < min) return min;if(v > max) return max;return v;}
+		Color(float red, float green, float blue){r = clamp(red, 0, 1); 
+												  g = clamp(green, 0, 1); 
+												  b = clamp(blue, 0, 1);}
+		Color operator * (float in){return   Color(r *  in,    g *  in,    b *  in);}
+		Color operator * (Color in){return   Color(r *  in.r,  g *  in.g,  b *  in.b);}
+		Color operator *= (float in){return  Color(r *= in,    g *= in,    b *= in);}
+		Color operator *= (Color in){return  Color(r *= in.r,  g *= in.g,  b *= in.b);}
+		Color operator += (float in){return  Color(r += in,    g += in,    b += in);}
+		Color operator += (Color in){return  Color(r += in.r,  g += in.g,  b += in.b);}
+		Color operator + (Color in){return   Color(r +  in.r,  g +  in.g,  b +  in.b);}
+		Color operator ^ (int in){return Color(pow(r,   in), pow(g, in), pow(b, in));}
 };
 #endif
