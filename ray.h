@@ -20,17 +20,19 @@ class RayHit{
 		float tFar;
 		bool reflective;
 		bool specular;
+		bool diffuse;
 		int intersect; // 0 if no intersect, 1 if a sphere, 2 if a triangle
 		Color color;
 		Vector normal;
 		Vector location;
 		Ray incomingRay;
 		RayHit(){intersect = 0; tNear = 10000;}
-		RayHit(float t, float t1, bool refl, bool spec, Color col, Vector norm, Vector loc, Ray inCome, int sect){
+		RayHit(float t, float t1, bool refl, bool spec, bool dif, Color col, Vector norm, Vector loc, Ray inCome, int sect){
 			tNear = t;
 			tFar = t1;
 			reflective = refl;
 			specular = spec;
+			diffuse = dif;
 			color = col;
 			normal = norm;
 			location = loc;
