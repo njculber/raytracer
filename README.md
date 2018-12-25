@@ -1,7 +1,9 @@
 # Basic raytracer program that implements:
 - Spheres & Triangles
 - Shadows
+- Reflections
 - Diffuse & Specular shading
+- Anti-aliasing
 
 To run program:
 1) Download all files into one folder
