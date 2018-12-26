@@ -15,7 +15,8 @@ class Perspective
 		int screenWidthPixels;
 		int screenHeightPixels;
 		Perspective(){}
-		Perspective(Vector camPos, Vector light, float dist, int worldWidth, int worldHeight, int pixelWidth, int pixelHeight);
+		Perspective(Vector camPos, Vector light, float dist, int worldWidth, 
+					int worldHeight, int pixelWidth, int pixelHeight);
 		Ray getRay(float, float);
 };
 #endif

@@ -27,7 +27,9 @@ class RayHit{
 		Vector location;
 		Ray incomingRay;
 		RayHit(){intersect = 0; tNear = 10000;}
-		RayHit(float t, float t1, bool refl, bool spec, bool dif, Color col, Vector norm, Vector loc, Ray inCome, int sect){
+		RayHit(float t, float t1, bool refl, bool spec, bool dif, 
+			Color col, Vector norm, Vector loc, Ray inCome, int sect)
+		{
 			tNear = t;
 			tFar = t1;
 			reflective = refl;

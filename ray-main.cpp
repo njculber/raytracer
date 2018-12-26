@@ -28,7 +28,7 @@ Material white;
 Material grey;
 Material greyrefl;
 Material liteBlue;
-Material whiterefl;
+Material whiteSpec;
 Material redSpec;
 
 int spheres;
@@ -138,12 +138,15 @@ void setupCustom(){
 	white.reflective = 0;
 	white.color = Color(1, 1, 1);
 	white.diffuse = 1;
+	whiteSpec.color = Color(0.2,0.4,0);
+	whiteSpec.diffuse = 1;
+	whiteSpec.specular = 1;
 	green.reflective = 0;
 	green.color = Color(0, 0.75, 0);
 	green.diffuse = 1;
 	green.specular = 1;
 	orange.reflective = 0;
-	orange.color = Color(1, 0.75, 0);
+	orange.color = Color(1, 0.62, 0);
 	orange.diffuse = 1;
 	orange.specular = 1;
 	yellow.reflective = 0;
@@ -153,6 +156,9 @@ void setupCustom(){
 	grey.reflective = 0;
 	grey.color = Color(0.4, 0.4, 0.4);
 	grey.diffuse = 1;
+	greyrefl.color = Color(0.4, 0.4, 0.4);
+	greyrefl.diffuse = 1;
+	greyrefl.specular = 1;
 
 	// create spheres
 	sphere[0].pos = Vector(0,-3.5,-15);
@@ -189,11 +195,11 @@ void setupCustom(){
 
 	sphere[8].pos = Vector(-6,1.2,-18);
 	sphere[8].radius = 0.75;
-	sphere[8].mat = white;
+	sphere[8].mat = greyrefl;
 
 	sphere[9].pos = Vector(6,1.2,-18);
 	sphere[9].radius = 0.75;
-	sphere[9].mat = white;
+	sphere[9].mat = greyrefl;
 
 	sphere[10].pos = Vector(-3,-1.8,-19.5);
 	sphere[10].radius = 0.2;
@@ -230,8 +236,6 @@ void setupCustom(){
 	sphere[18].pos = Vector(0.5,0.2,-19.5);
 	sphere[18].radius = 0.2;
 	sphere[18].mat = blue;
-
-
 
 	// floor                      // vertB           // vertC           // vertD
 	triangle[0] = Triangle(Vector(-8,-5,-20), Vector(8, -5, -10), Vector(8,-5,-20));
@@ -396,7 +400,7 @@ int inShadow(RayHit hit){
 }
 
 // calculate specular shading
-Color specularScalar(RayHit hit){ if(!hit.specular) return Color(0,0,0);
+Color specular(RayHit hit){ if(!hit.specular) return Color(0,0,0);
 	// find direction to light & camera
 	Vector lightDir = light - hit.location;
 	Vector toCamera = hit.incomingRay.origin - hit.location;
@@ -408,14 +412,14 @@ Color specularScalar(RayHit hit){ if(!hit.specular) return Color(0,0,0);
 	float specular = hit.normal.dot(halfVector);
 
 	// check if we're in shadow, if so, return no color
-	if(inShadow(hit)) return Color(0, 0, 0);
+	// if(inShadow(hit)) return Color(0, 0, 0);
 
 	specular = pow(specular, 180);
 	return Color(specular, specular, specular);
 }
 
 // calculate diffuse shading
-Color diffuseScalar(RayHit hit){ if(!hit.diffuse) return Color(0,0,0);
+Color diffuse(RayHit hit){ if(!hit.diffuse) return Color(0,0,0);
 	Vector lightDir = light - hit.location;
 	lightDir.normalize();
 	float diffuse = lightDir.dot(hit.normal);
@@ -433,32 +437,19 @@ Vector reflect(Vector d, Vector n){
 	return d - (n * (2 * d.dot(n)));
 }
 
-/* 
-	recurse through reflection until we dont hit a reflective object
+Color trace(Ray ray, int depth){
+	if(depth >= 10) return Color(0,0,0);
+	RayHit hit = findNearest(ray);
 
-	return black once we've recursed 10 times
-*/
-Color calculateReflection(RayHit hit, int depth){ if(!hit.reflective) return Color(0,0,0);
-	if(depth >= 10) return Color(0, 0, 0);
+	if(hit.reflective){
+		Vector reflectVector = reflect(hit.incomingRay.direction, hit.normal);
+		reflectVector.normalize();
+		Ray newRay = Ray(hit.location, reflectVector);
+		newRay.origin = newRay.origin + (newRay.direction * 0.0001);
+		return trace(newRay, depth+1);
+	}
 
-	RayHit tempHit;
-
-	// get reflection vector
-	Vector refl = reflect(hit.incomingRay.direction, hit.normal);
-	refl.normalize();
-	Ray reflRay(hit.location, refl);
-
-	// bump ray
-	reflRay.origin = reflRay.origin + (reflRay.direction * 0.0001);
-
-	// find the nearest hit for both spheres & triangles
-	tempHit = findNearest(reflRay);
-
-	// if object isn't reflective -- return that color
-	if(!tempHit.reflective) return diffuseScalar(tempHit) + specularScalar(tempHit);
-
-	// otherwise recurse
-	return calculateReflection(tempHit, depth+1);
+	return diffuse(hit) + specular(hit);
 }
 
 int main(int argc, char *argv[]){
@@ -482,6 +473,7 @@ int main(int argc, char *argv[]){
 	} 
 	else{
 		setupCustom();
+		printf("Drawing\n");
 		strcpy(fileName, "custom.png");
 	}
 
@@ -495,11 +487,8 @@ int main(int argc, char *argv[]){
 			for(int i = 1; i < rays+1; i += 1){
 				for(int j = 1; j < rays+1; j += 1){
 
-					// find nearest object in the scene
-					RayHit hit = findNearest(per.getRay(x + (float)j/(rays+1), 
-														y + (float)i/(rays+1)));
-
-					avgColor += (calculateReflection(hit, 0) + diffuseScalar(hit) + specularScalar(hit)) ^ 2;			
+					Ray ray = per.getRay(x + (float)j/(rays+1), y + (float)i/(rays+1));
+					avgColor += trace(ray, 0) ^ 2;			
 				}
 			}
 
