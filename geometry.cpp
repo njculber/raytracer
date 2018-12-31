@@ -67,10 +67,6 @@ RayHit Triangle::intersect(Ray ray){
 	float beta = ( ( J * ( (E*I) - (H*F) ) ) + ( K * ( (G*F) - (D*I) ) ) + ( L * ( (D*H) - (E*G) ) ) ) / M;
 	if(beta < 0 || beta > (1 - gamma)) return RayHit();
 
-	/* 
-		otherwise we've intersected the triangle
-	*/
-
 	//calculate location of hit
 	Vector location = (ray.direction * t) + ray.origin;
 
