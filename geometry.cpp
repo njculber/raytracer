@@ -26,15 +26,9 @@ RayHit Sphere::intersect(Ray ray){
 		normal.normalize();
 
 		// return RayHit object
-		return RayHit(t0, t1, mat.reflective, mat.specular, mat.diffuse, mat.color, normal, location, ray, 1);
+		return RayHit(t0, t1, mat, normal, location, ray, 1);
 	}
 	else return RayHit();
-}
-
-Triangle::Triangle(Vector in1, Vector in2, Vector in3){
-	vertA = in1;
-	vertB = in2;
-	vertC = in3;
 }
 
 RayHit Triangle::intersect(Ray ray){
@@ -71,10 +65,8 @@ RayHit Triangle::intersect(Ray ray){
 	Vector location = (ray.direction * t) + ray.origin;
 
 	// calculate normal
-	Vector AB = Vector(A, B, C);
-	Vector AC = Vector(D, E, F);
-	Vector normal = AB.cross(AC);
+	Vector normal = Vector(A,B,C).cross(Vector(D,E,F));
 	normal.normalize();
 
-	return RayHit(t, t, mat.reflective, mat.specular, mat.diffuse, mat.color, normal, location, ray, 2);
+	return RayHit(t, t, mat, normal, location, ray, 2);
 }
