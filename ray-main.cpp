@@ -5,373 +5,179 @@
 */
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
-#include <stdio.h>
-#include <string.h>
-#include <math.h>
 #include "stb_image_write.h"
 #include "perspective.h"
 #include "geometry.h"
 using namespace std;
 
-const int dim = 512;
-unsigned char arrayContainingImage[dim*dim*3];
+// width & height of the image
+const int width = 512;
+const int height = 512;
+unsigned char arrayContainingImage[width*height*3];
 
-Material refl;
-Material red;
-Material blue;
-Material green;
-Material orange;
-Material yellow;
-Material violet;
-Material indigo;
-Material white;
-Material grey;
-Material greyrefl;
-Material liteBlue;
-Material whiteSpec;
-Material redSpec;
-
-int spheres;
-int triangles;
-Sphere *sphere;
-Triangle *triangle;
+static int shapes;
+Shape **shape;
 
 Perspective per;
-Vector light;
-Vector cameraPosition;
+Shape *light;
+Shape *light2;
+float ambientShade;
 
 /* set up the reference scene */
 void setupReference(){
-	spheres = 3;
-	triangles = 5;
-	sphere = (Sphere *)malloc(spheres * sizeof(Sphere));
-	triangle = (Triangle *)malloc(triangles * sizeof(Triangle));
+	shapes = 9;
+	shape = new Shape*[shapes];
 
-	// make a material which is reflective
-	refl.reflective = 1;
-	refl.color = Color(0, 0, 0);
+	/* make several materials to choose from */
 
-	// make several diffuse materials to choose from
-	red.reflective = 0;
-	red.color = Color(1, 0, 0);
-	red.diffuse = 1;
-	blue.reflective = 0;
-	blue.color = Color(0, 0, 1);
-	blue.diffuse = 1;
-	white.reflective = 0;
-	white.color = Color(1, 1, 1);
-	white.diffuse = 1;
-	redSpec.diffuse = 1;
-	redSpec.specular = 1;
-	redSpec.color = Color(1, 0, 0);
+				      // light  // reflective // refractive // specular // diffuse // color
+	Material     refl(0,        1,            0,            0,          0,         Color(0,0,0));
+	Material      red(0,        0,            0,            0,          1,         Color(1,0,0));
+	Material     blue(0,        0,            0,            0,          1,         Color(0,0,1));
+	Material    white(0,        0,            0,            0,          1,         Color(1,1,1));
+	Material  redSpec(0,        0,            0,            1,          1,         Color(1,0,0));
 
-	// create three spheres
-	sphere[0].pos = Vector(0,0,-16);
-	sphere[0].radius = 2;
-	sphere[0].mat = refl;
-	
-	sphere[1].pos = Vector(3,-1,-14);
-	sphere[1].radius = 1;
-	sphere[1].mat = refl;
-	
-	sphere[2].pos = Vector(-3,-1,-14);
-	sphere[2].radius = 1;
-	sphere[2].mat = redSpec;
+	// create sphere & triangles
+	shape[0] = new Sphere(Vector(0,0,-16),   2, refl);
+	shape[1] = new Sphere(Vector(3,-1,-14),  1, refl);
+	shape[2] = new Sphere(Vector(-3,-1,-14), 1, redSpec);
+	shape[3] = new Triangle(Vector(-8,-2,-20), Vector(8,-2,-20), Vector(8,10,-20), blue);
+	shape[4] = new Triangle(Vector(-8,-2,-20), Vector(8,10,-20), Vector(-8,10,-20), blue);
+	shape[5] = new Triangle(Vector(-8,-2,-20), Vector(8, -2, -10), Vector(8,-2,-20), white);
+	shape[6] = new Triangle(Vector(-8,-2,-20), Vector(-8,-2,-10), Vector(8, -2,-10), white);
+	shape[7] = new Triangle(Vector(8,-2,-20), Vector(8, -2,-10), Vector(8,10,-20), red);
 
-	// back wall
-	triangle[0] = Triangle(Vector(-8,-2,-20), Vector(8,-2,-20), Vector(8,10,-20));
-	triangle[0].mat = blue;
-	
-	triangle[1] = Triangle(Vector(-8,-2,-20), Vector(8,10,-20), Vector(-8,10,-20));
-	triangle[1].mat = blue;
-
-	// floor
-	triangle[2] = Triangle(Vector(-8,-2,-20), Vector(8, -2, -10), Vector(8,-2,-20));
-	triangle[2].mat = white;
-                                  // vertB           // vertA           // vertC
-	triangle[3] = Triangle(Vector(-8,-2,-20), Vector(-8,-2,-10), Vector(8, -2,-10));
-	triangle[3].mat = white;
-
-	// right red triangle
-	triangle[4] = Triangle(Vector(8,-2,-20), Vector(8, -2,-10), Vector(8,10,-20));
-	triangle[4].mat = red;
+	// set up light
+	Material lightMat(1, 0, 0, 0, 0, Color(1,1,1));
+	light = new Sphere(Vector(3,5,-15), 0.25, lightMat);
+	light2 = new Sphere(Vector(3,5,-15), 0.25, lightMat);
+	shape[8] = light;
+	ambientShade = 0.2;
 
 	// set up perspective projection
-	cameraPosition = Vector(0, 0, 0);
-	light = Vector(3, 5, -15);
 	per = Perspective(
-		cameraPosition, // position of camera
-		light, 			// position of light
+		Vector(0,0,0), // position of camera
 		-2, 			// distance camera is from screen
 		2, 				// world width
 		2,              // world height
-		dim,            // world width in pixels
-		dim);		    // world height in pixels
+		width,          // world width in pixels
+		height);		// world height in pixels
 }
 
 /* set up the custom scene */
 void setupCustom(){
-	spheres = 19;
-	triangles = 30;
-	sphere = (Sphere *)malloc(spheres * sizeof(Sphere));
-	triangle = (Triangle *)malloc(triangles * sizeof(Triangle));
+	shapes = 49;
+	shape = new Shape*[shapes];
 
-	// make several diffuse materials to choose from
-	refl.reflective = 1;
-	refl.color = Color(0, 0, 0);
-	red.reflective = 0;
-	red.color = Color(1, 0, 0);
-	red.diffuse = 1;
-	red.specular = 1;
-	blue.reflective = 0;
-	blue.color = Color(0, 0, 1);
-	blue.diffuse = 1;
-	blue.specular = 1;
-	indigo.reflective = 0;
-	indigo.color = Color(0.29, 0, 0.51);
-	indigo.diffuse = 1;
-	indigo.specular = 1;
-	violet.reflective = 0;
-	violet.color = Color(0.5, 0, 0.5);
-	violet.diffuse = 1;
-	violet.specular = 1;
-	white.reflective = 0;
-	white.color = Color(1, 1, 1);
-	white.diffuse = 1;
-	whiteSpec.color = Color(0.2,0.4,0);
-	whiteSpec.diffuse = 1;
-	whiteSpec.specular = 1;
-	green.reflective = 0;
-	green.color = Color(0, 0.75, 0);
-	green.diffuse = 1;
-	green.specular = 1;
-	orange.reflective = 0;
-	orange.color = Color(1, 0.62, 0);
-	orange.diffuse = 1;
-	orange.specular = 1;
-	yellow.reflective = 0;
-	yellow.color = Color(1, 1, 0);
-	yellow.diffuse = 1;
-	yellow.specular = 1;
-	grey.reflective = 0;
-	grey.color = Color(0.4, 0.4, 0.4);
-	grey.diffuse = 1;
-	greyrefl.color = Color(0.4, 0.4, 0.4);
-	greyrefl.diffuse = 1;
-	greyrefl.specular = 1;
+	/* make several materials to choose from */ 
 
-	// create spheres
-	sphere[0].pos = Vector(0,-3.5,-15);
-	sphere[0].radius = 1;
-	sphere[0].mat = refl;
+				      // light  // reflective // refractive // specular // diffuse // color
+	Material     refl(0,        1,            0,            0,          0,         Color(0,0,0));
+	Material      red(0,        0,            0,            1,          1,         Color(1,0,0));
+	Material     blue(0,        0,            0,            1,          1,         Color(0,0,1));
+	Material    white(0,        0,            0,            0,          1,         Color(1,1,1));
+	Material  redSpec(0,        0,            0,            1,          1,         Color(1,0,0));
+	Material   indigo(0,        0,            0,            1,          1,         Color(0.29,0,0.51));
+	Material   violet(0,        0,            0,            1,          1,         Color(0.5,0,0.5));
+	Material    green(0,        0,            0,            1,          1,         Color(0,1,0));
+	Material   orange(0,        0,            0,            1,          1,         Color(1,0.62,0));
+	Material   yellow(0,        0,            0,            1,          1,         Color(1,1,0));
+	Material     grey(0,        0,            0,            0,          1,         Color(0.4,0.4,0.4));
+	Material greySpec(0,        0,            0,            1,          1,         Color(0.4,0.4,0.4));
 
-	sphere[3].pos = Vector(0,-4.5,-12);
-	sphere[3].radius = 0.5;
-	sphere[3].mat = green;
-	
-	sphere[1].pos = Vector(1.75,-4.5,-13);
-	sphere[1].radius = 0.5;
-	sphere[1].mat = blue;
-	
-	sphere[4].pos = Vector(2.5,-4.5,-15);
-	sphere[4].radius = 0.5;
-	sphere[4].mat = indigo;
-	
-	sphere[2].pos = Vector(-2.5,-4.5,-15);
-	sphere[2].radius = 0.5;
-	sphere[2].mat = orange;
-	
-	sphere[5].pos = Vector(-1.75,-4.5,-13);
-	sphere[5].radius = 0.5;
-	sphere[5].mat = yellow;
+	// create some spheres
+	shape[0] =  new Sphere(Vector(0,-3.5,-15), 		1, 		refl);
+	shape[1] =  new Sphere(Vector(0,-4.5,-12), 		0.5, 	green);
+	shape[2] =  new Sphere(Vector(1.75,-4.5,-13), 	0.5, 	blue); 
+	shape[3] =  new Sphere(Vector(2.5,-4.5,-15), 	0.5, 	indigo);
+	shape[4] =  new Sphere(Vector(-2.5,-4.5,-15), 	0.5, 	orange);
+	shape[5] =  new Sphere(Vector(-1.75,-4.5,-13), 	0.5, 	yellow);
+	shape[6] =  new Sphere(Vector(1.5,-4.5,-17), 	0.5, 	violet);
+	shape[7] =  new Sphere(Vector(-1.5,-4.5,-17), 	0.5, 	red);
+	shape[8] =  new Sphere(Vector(-6,1.2,-18), 		0.75, 	greySpec);
+	shape[9] =  new Sphere(Vector(6,1.2,-18), 		0.75, 	greySpec);
+	shape[10] = new Sphere(Vector(-3,-1.8,-19.5), 	0.2 , 	green);
+	shape[11] = new Sphere(Vector(3,-1.8,-19.5), 	0.2, 	green);
+	shape[12] = new Sphere(Vector(0,-0.3,-19.5), 	0.2, 	green);
+	shape[13] = new Sphere(Vector(-3.5,-1.8,-19.5), 0.2, 	red);
+	shape[14] = new Sphere(Vector(2.5,-1.8,-19.5), 	0.2, 	red);
+	shape[15] = new Sphere(Vector(-0.5,-0.3,-19.5), 0.2, 	red);
+	shape[16] = new Sphere(Vector(-2.5,-1.8,-19.5), 0.2, 	blue);
+	shape[17] = new Sphere(Vector(3.5,-1.8,-19.5), 	0.2, 	blue);
+	shape[18] = new Sphere(Vector(0.5,-0.3,-19.5), 	0.2, 	blue);
 
-	sphere[6].pos = Vector(1.5,-4.5,-17);
-	sphere[6].radius = 0.5;
-	sphere[6].mat = violet;
-	
-	sphere[7].pos = Vector(-1.5,-4.5,-17);
-	sphere[7].radius = 0.5;
-	sphere[7].mat = red;
+	// floor
+	shape[19] = new Triangle(Vector(-8,-5,-20), Vector(8, -5, -10), Vector(8,-5,-20), grey);
+	shape[20] = new Triangle(Vector(-8,-5,-20), Vector(-8,-5,-10), Vector(8, -5,-10), grey);
 
-	sphere[8].pos = Vector(-6,1.2,-18);
-	sphere[8].radius = 0.75;
-	sphere[8].mat = greyrefl;
+	// diamond left
+	shape[21] = new Triangle(Vector(-5.8, -2,-17.5), Vector(-6.2,-2,-17.5), Vector(-6,-5,-18), white);
+	shape[22] = new Triangle(Vector(-6,-5,-18), Vector(-5.8,-2,-18.5), Vector(-5.8, -2,-17.5), white);
+	shape[23] = new Triangle(Vector(-6,0,-18), Vector(-6.2,-2,-17.5), Vector(-5.8, -2,-17.5), white);
+	shape[24] = new Triangle(Vector(-5.8, -2,-17.5), Vector(-5.8,-2,-18.5), Vector(-6,0,-18), white);
+	shape[25] = new Triangle(Vector(-6,0,-18), Vector(-6.2,-2,-18.5), Vector(-5.8, -2,-18.5), white);
+	shape[26] = new Triangle(Vector(-5.8, -2,-18.5), Vector(-6.2,-2,-18.5), Vector(-6,-5,-18), white);
 
-	sphere[9].pos = Vector(6,1.2,-18);
-	sphere[9].radius = 0.75;
-	sphere[9].mat = greyrefl;
+	// diamond right
+	shape[27] = new Triangle(Vector(6,-5,-18), Vector(6.2,-2,-17.5), Vector(5.8, -2,-17.5), white);
+	shape[28] = new Triangle(Vector(5.8, -2,-17.5), Vector(5.8,-2,-18.5), Vector(6,-5,-18), white);
+	shape[29] = new Triangle(Vector(5.8, -2,-17.5), Vector(6.2,-2,-17.5), Vector(6,0,-18), white);
+	shape[30] = new Triangle(Vector(6,0,-18), Vector(5.8,-2,-18.5), Vector(5.8, -2,-17.5), white);
+	shape[31] = new Triangle(Vector(6,0,-18), Vector(6.2,-2,-18.5), Vector(5.8, -2,-18.5), white);
+	shape[32] = new Triangle(Vector(5.8, -2,-18.5), Vector(6.2,-2,-18.5), Vector(6,-5,-18), white);
 
-	sphere[10].pos = Vector(-3,-1.8,-19.5);
-	sphere[10].radius = 0.2;
-	sphere[10].mat = green;
+	// ceiling        
+	shape[33] = new Triangle(Vector(8,5,-20), Vector(8, 5, -10), Vector(-8,5,-20), grey);
+	shape[34] = new Triangle(Vector(8, 5,-10), Vector(-8,5,-10), Vector(-8,5,-20), grey);
 
-	sphere[11].pos = Vector(3,-1.8,-19.5);
-	sphere[11].radius = 0.2;
-	sphere[11].mat = green;
-
-	sphere[12].pos = Vector(0,0.2,-19.5);
-	sphere[12].radius = 0.2;
-	sphere[12].mat = green;
-
-	sphere[13].pos = Vector(-3.5,-1.8,-19.5);
-	sphere[13].radius = 0.2;
-	sphere[13].mat = red;
-
-	sphere[14].pos = Vector(2.5,-1.8,-19.5);
-	sphere[14].radius = 0.2;
-	sphere[14].mat = red;
-
-	sphere[15].pos = Vector(-0.5,0.2,-19.5);
-	sphere[15].radius = 0.2;
-	sphere[15].mat = red;
-
-	sphere[16].pos = Vector(-2.5,-1.8,-19.5);
-	sphere[16].radius = 0.2;
-	sphere[16].mat = blue;
-
-	sphere[17].pos = Vector(3.5,-1.8,-19.5);
-	sphere[17].radius = 0.2;
-	sphere[17].mat = blue;
-
-	sphere[18].pos = Vector(0.5,0.2,-19.5);
-	sphere[18].radius = 0.2;
-	sphere[18].mat = blue;
-
-	// floor                      // vertB           // vertC           // vertD
-	triangle[0] = Triangle(Vector(-8,-5,-20), Vector(8, -5, -10), Vector(8,-5,-20));
-	triangle[0].mat = grey;
-                                  // vertB           // vertA           // vertC
-	triangle[1] = Triangle(Vector(-8,-5,-20), Vector(-8,-5,-10), Vector(8, -5,-10));
-	triangle[1].mat = grey;
-
-	// diamond 1
-	triangle[2] = Triangle(Vector(-5.8, -2,-17.5), Vector(-6.2,-2,-17.5), Vector(-6,-5,-18));
-	triangle[2].mat = white;
-
-	triangle[3] = Triangle(Vector(-6,-5,-18), Vector(-5.8,-2,-18.5), Vector(-5.8, -2,-17.5));
-	triangle[3].mat = white;
-
-	triangle[4] = Triangle(Vector(-6,0,-18), Vector(-6.2,-2,-17.5), Vector(-5.8, -2,-17.5));
-	triangle[4].mat = white;
-
-	triangle[5] = Triangle(Vector(-5.8, -2,-17.5), Vector(-5.8,-2,-18.5), Vector(-6,0,-18));
-	triangle[5].mat = white;
-
-	triangle[14] = Triangle(Vector(-6,0,-18), Vector(-6.2,-2,-18.5), Vector(-5.8, -2,-18.5));
-	triangle[14].mat = white;
-
-	triangle[15] = Triangle(Vector(-5.8, -2,-18.5), Vector(-6.2,-2,-18.5), Vector(-6,-5,-18));
-	triangle[15].mat = white;
-
-	// diamond 2
-	triangle[6] = Triangle(Vector(6,-5,-18), Vector(6.2,-2,-17.5), Vector(5.8, -2,-17.5));
-	triangle[6].mat = white;
-
-	triangle[7] = Triangle(Vector(5.8, -2,-17.5), Vector(5.8,-2,-18.5), Vector(6,-5,-18));
-	triangle[7].mat = white;
-
-	triangle[8] = Triangle(Vector(5.8, -2,-17.5), Vector(6.2,-2,-17.5), Vector(6,0,-18));
-	triangle[8].mat = white;
-
-	triangle[9] = Triangle(Vector(6,0,-18), Vector(5.8,-2,-18.5), Vector(5.8, -2,-17.5));
-	triangle[9].mat = white;
-
-	triangle[16] = Triangle(Vector(6,0,-18), Vector(6.2,-2,-18.5), Vector(5.8, -2,-18.5));
-	triangle[16].mat = white;
-
-	triangle[17] = Triangle(Vector(5.8, -2,-18.5), Vector(6.2,-2,-18.5), Vector(6,-5,-18));
-	triangle[17].mat = white;
-
-	// ceiling                   // vertB           // vertC           // vertD
-	triangle[10] = Triangle(Vector(8,5,-20), Vector(8, 5, -10), Vector(-8,5,-20));
-	triangle[10].mat = grey;
-                                  // vertC           // vertA           // vertB
-	triangle[11] = Triangle(Vector(8, 5,-10), Vector(-8,5,-10), Vector(-8,5,-20));
-	triangle[11].mat = grey;
-
-	// back wall                    // vertB           // vertC           // vertD
-	triangle[12] = Triangle(Vector(8,-5,-20), Vector(8, 5, -20), Vector(-8,-5,-20));
-	triangle[12].mat = grey;
-                                  // vertC           // vertA           // vertD
-	triangle[13] = Triangle(Vector(8, 5,-20), Vector(-8,5,-20), Vector(-8,-5,-20));
-	triangle[13].mat = grey;
+	// back wall                    
+	shape[35] = new Triangle(Vector(8,-5,-20), Vector(8, 5, -20), Vector(-8,-5,-20), grey);
+	shape[36] = new Triangle(Vector(8, 5,-20), Vector(-8,5,-20), Vector(-8,-5,-20), grey);
 
 	//side walls
-	triangle[18] = Triangle(Vector(8,-5,-20), Vector(8, -5,-10), Vector(8,5,-20));
-	triangle[18].mat = grey;
+	shape[37] = new Triangle(Vector(8,-5,-20), Vector(8, -5,-10), Vector(8,5,-20), grey);
+	shape[38] = new Triangle(Vector(8,-5,-10), Vector(8, 5,-10),Vector(8,5,-20), grey);
+	shape[39] = new Triangle(Vector(-8,5,-20), Vector(-8, -5,-10),Vector(-8,-5,-20), grey);
+	shape[40] = new Triangle(Vector(-8,5,-20), Vector(-8, 5,-10), Vector(-8,-5,-10), grey);
 
-	triangle[19] = Triangle( Vector(8,-5,-10), Vector(8, 5,-10),Vector(8,5,-20));
-	triangle[19].mat = grey;
+	// shelves
+	shape[41] = new Triangle(Vector(-4,-2,-19), Vector(-2, -2, -20), Vector(-4,-2,-20), white);
+	shape[42] = new Triangle(Vector(-4,-2,-19), Vector(-2,-2,-19), Vector(-2, -2,-20), white);
+	shape[43] = new Triangle(Vector(2,-2,-19), Vector(4, -2, -20), Vector(2,-2,-20), white);
+	shape[44] = new Triangle(Vector(2,-2,-19), Vector(4,-2,-19), Vector(4, -2,-20), white);
+	shape[45] = new Triangle(Vector(-1,-0.5,-19), Vector(1,-0.5, -20), Vector(-1,-0.5,-20), white);
+	shape[46] = new Triangle(Vector(-1,-0.5,-19), Vector(1,-0.5,-19), Vector(1,-0.5,-20), white);
 
-	triangle[20] = Triangle(Vector(-8,5,-20), Vector(-8, -5,-10),Vector(-8,-5,-20));
-	triangle[20].mat = grey;
-
-	triangle[21] = Triangle(Vector(-8,5,-20), Vector(-8, 5,-10), Vector(-8,-5,-10));
-	triangle[21].mat = grey;
-
-	// light square
-	triangle[22] = Triangle(Vector(1,4.9,-16), Vector(1, 4.9, -14), Vector(-1,4.9,-16));
-	triangle[22].mat = white;
-	                                 // vertC           // vertA           // vertB
-	triangle[23] = Triangle(Vector(1, 4.9,-14), Vector(-1,4.9,-14), Vector(-1,4.9,-16));
-	triangle[23].mat = white;
-
-	// shelves                     // vertB           // vertC           // vertD
-	triangle[24] = Triangle(Vector(-4,-2,-19), Vector(-2, -2, -20), Vector(-4,-2,-20));
-	triangle[24].mat = white;
-                                  // vertC           // vertA           // vertD
-	triangle[25] = Triangle(Vector(-4,-2,-19), Vector(-2,-2,-19), Vector(-2, -2,-20));
-	triangle[25].mat = white;
-
-	triangle[26] = Triangle(Vector(2,-2,-19), Vector(4, -2, -20), Vector(2,-2,-20));
-	triangle[26].mat = white;
-                                  // vertC           // vertA           // vertD
-	triangle[27] = Triangle(Vector(2,-2,-19), Vector(4,-2,-19), Vector(4, -2,-20));
-	triangle[27].mat = white;
-
-	triangle[28] = Triangle(Vector(-1,0,-19), Vector(1, 0, -20), Vector(-1,0,-20));
-	triangle[28].mat = white;
-                                  // vertC           // vertA           // vertD
-	triangle[29] = Triangle(Vector(-1,0,-19), Vector(1,0,-19), Vector(1, 0,-20));
-	triangle[29].mat = white;
-
+	// set up light                  // intensity & color
+	Material lightMat(1, 0, 0, 0, 0, Color(1,1,1));
+	light =  new Triangle(Vector(1,4.9,-16), Vector(1, 4.9,-14), Vector(-1,4.9,-16), lightMat);
+	light2 = new Triangle(Vector(1,4.9,-14), Vector(-1,4.9,-14), Vector(-1,4.9,-16), lightMat);
+	shape[47] = light;
+	shape[48] = light2;
+	ambientShade = 0.2;
 
 	// set up perspective projection
-	cameraPosition = Vector(0, 0, 0);
-	light = Vector(0, 4.5, -15);
 	per = Perspective(
-		cameraPosition, // position of camera
-		light, 			// position of light
-		-2, 
-		2,			// distance camera is from screen
-		2, 				// size of the world
-		dim,
-		dim);			// size of world in pixels
+		Vector(0,0,0),  // position of camera
+		-2, 			// distance camera is from screen
+		2,				// width of the world
+		2, 				// height of the world
+		width,			// width of world in pixels
+		height);		// height of world in pixels
 }
 
-/*
-	find nearest object in the scene
-
-	Will return RayHit object no matter what -- but will use
-	the intersect flag and tNear data to determine which to use
-*/
+/* Find the nearest intersection given a ray */
 RayHit findNearest(Ray ray){
 	RayHit hit, tempHit;
 
-	// find closest sphere
-	for(int i = 0; i < spheres; i += 1){
-		tempHit = sphere[i].intersect(ray);
-		if(tempHit.tNear < hit.tNear && tempHit.tNear >= 0){
+	// find nearest shape
+	for(int i = 0; i < shapes; i += 1){
+		tempHit = shape[i]->intersect(ray);
+		if(tempHit.tNear < hit.tNear && tempHit.tNear > 0){
 			hit = tempHit;
 		}
 	}
-	// find closest triangle
-	for(int i = 0; i < triangles; i += 1){
-		tempHit = triangle[i].intersect(ray);
-		if(tempHit.tNear < hit.tNear && tempHit.tNear >= 0){
-			hit = tempHit;
-		}
-	}
+
 	return hit;
 }
 
@@ -382,25 +188,31 @@ float clamp(float value, float min, float max){
 	return value;
 }
 
-// return 1 if we're in shadow -- 0 otherwise
-int inShadow(RayHit hit){
-	// calculate direction to light and magnitude
-	Vector direction = light - hit.location;
-	float mag = direction.magnitude();
-	direction.normalize();
+// calculate average amount of shadow
+float shadowAvg(RayHit hit){
+	int hits = 0;
+	float shadowRays = 5;
+	for(int i = 0; i < shadowRays; i += 1){
+		// calculate direction to light
+		Vector direction = light->newLightPos() - hit.location;
+		// if(drand48() > 0.5) direction = light2->newLightPos() - hit.location;
+		direction.normalize();
 
-	Ray newRay(hit.location, direction);
-	newRay.origin = newRay.origin + (newRay.direction * 0.0001);
+		// create new ray and bump it a little to prevent noise
+		Ray newRay(hit.location, direction);
+		newRay.origin = newRay.origin + (newRay.direction * 0.001);
 
-	// check if closest object is between source of light
-	if(findNearest(newRay).tNear < mag) return 1;
-	return 0;
+		// see if we successfully hit the light
+		if(findNearest(newRay).material.isLight) hits += 1;
+	}
+
+	return clamp((float)hits/shadowRays, ambientShade, 1);
 }
 
 // calculate specular shading
-Color specular(RayHit hit){ if(!hit.specular) return Color(0,0,0);
+Color specular(RayHit hit){ if(!hit.material.specular) return Color(0,0,0);
 	// find direction to light & camera
-	Vector lightDir = light - hit.location;
+	Vector lightDir = light->pos - hit.location;
 	Vector toCamera = hit.incomingRay.origin - hit.location;
 	lightDir.normalize();
 	toCamera.normalize();
@@ -409,29 +221,24 @@ Color specular(RayHit hit){ if(!hit.specular) return Color(0,0,0);
 	Vector halfVector = (lightDir + toCamera) / (lightDir + toCamera).magnitude();
 	float specular = hit.normal.dot(halfVector);
 
-	if(inShadow(hit)) return Color(0,0,0);
-
 	specular = pow(specular, 180);
 	return Color(specular, specular, specular);
 }
 
-// calculate diffuse shading
-Color diffuse(RayHit hit){ if(!hit.diffuse) return Color(0,0,0);
-	Vector lightDir = light - hit.location;
+// calculate diffuse & ambient shading
+Color diffuse(RayHit hit){ if(!hit.material.diffuse) return Color(0,0,0);
+	Vector lightDir = light->pos - hit.location;
 	lightDir.normalize();
 	float diffuse = lightDir.dot(hit.normal);
-	diffuse = clamp(diffuse, 0.2, 1);
+	diffuse = clamp(diffuse, ambientShade, 1);
 
-	// check if we're in shadow, if so, return ambient lighting
-	if(inShadow(hit)) return hit.color *= 0.2;
-
-	// otherwise, return diffuse shading
-	return hit.color *= diffuse;
+	// return diffuse shading including amount of shadow
+	return hit.material.color *= diffuse;
 }
 
 // calculate reflection vector
-Vector reflect(Vector d, Vector n){
-	return d - (n * (2 * d.dot(n)));
+Vector reflect(Vector v, Vector n){
+	return v - (n * (2 * v.dot(n)));
 }
 
 // trace ray - calculate reflection, diffuse, & specular
@@ -439,17 +246,20 @@ Color trace(Ray ray, int depth){
 	if(depth >= 10) return Color(0,0,0);
 	RayHit hit = findNearest(ray);
 
-	if(hit.reflective){
+	// check reflective property
+	if(hit.material.reflective){
 		// create new reflection ray
 		Vector reflectVector = reflect(hit.incomingRay.direction, hit.normal);
 		reflectVector.normalize();
 		Ray newRay = Ray(hit.location, reflectVector);
-		newRay.origin = newRay.origin + (newRay.direction * 0.0001);
+		newRay.origin += (newRay.direction * 0.0001);
 
 		return trace(newRay, depth+1);
 	}
 
-	return diffuse(hit) + specular(hit);
+	if(hit.material.isLight) return light->mat.color;
+
+	return ((diffuse(hit) + specular(hit)) * shadowAvg(hit)) * light->mat.color;
 }
 
 int main(int argc, char *argv[]){
@@ -471,28 +281,31 @@ int main(int argc, char *argv[]){
 			return 1;
 		}
 	}
-	
-	// start drawing image
-	for(int y = 0; y < dim; y += 1){
-		for(int x = 0; x < dim; x += 1){
-			int rays = 5; // total rays = rays ^ 2;
+
+	// start tracing
+	for(int y = 0; y < height; y += 1){
+		for(int x = 0; x < width; x += 1){
+
+			int rays = 3; // NOTE: total rays sent is (rays^2)
 			Color avgColor = Color(0, 0, 0);
+
 			// trace
 			for(int i = 1; i < rays+1; i += 1){
 				for(int j = 1; j < rays+1; j += 1){
 					Ray ray = per.getRay(x + (float)j/(rays+1), y + (float)i/(rays+1));
-					avgColor += trace(ray, 0) ^ 2;			
+					avgColor += trace(ray, 0) ^ 2;	
 				}
 			}
-			// calculate final color from all rays and draw
-			arrayContainingImage[ (y*dim*3) + (x*3)]      = (sqrt(avgColor.r/(rays*rays))) * 255;
-			arrayContainingImage[((y*dim*3) + (x*3)) + 1] = (sqrt(avgColor.g/(rays*rays))) * 255;
-			arrayContainingImage[((y*dim*3) + (x*3)) + 2] = (sqrt(avgColor.b/(rays*rays))) * 255;
+
+			// calculate final color from all the rays and draw to pixel x, y
+			arrayContainingImage[ (y*width*3) + (x*3)]      = (sqrt(avgColor.r/(rays*rays))) * 255;
+			arrayContainingImage[((y*width*3) + (x*3)) + 1] = (sqrt(avgColor.g/(rays*rays))) * 255;
+			arrayContainingImage[((y*width*3) + (x*3)) + 2] = (sqrt(avgColor.b/(rays*rays))) * 255;
 		}
 	}
+	free(shape);
 
-	stbi_write_png(fileName, dim, dim, 3, arrayContainingImage, dim*3);
-	free(sphere);
-	free(triangle);
+	// export PNG using data from array containing image
+	stbi_write_png(fileName, width, height, 3, arrayContainingImage, width*3);
 	return 0;
 }
